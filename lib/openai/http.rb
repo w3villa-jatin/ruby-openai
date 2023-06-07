@@ -75,9 +75,9 @@ module OpenAI
 
     def headers
       {
-        "Content-Type" => "application/json",
-        "Authorization" => "Bearer #{OpenAI.configuration.access_token}",
-        "OpenAI-Organization" => OpenAI.configuration.organization_id
+        "Content-Type" => "application/json"
+        # "Authorization" => "Bearer #{OpenAI.configuration.access_token}",
+        # "OpenAI-Organization" => OpenAI.configuration.organization_id
       }
     end
 
