@@ -91,6 +91,21 @@ OpenAI.configure do |config|
 end
 ```
 
+#### Azure
+
+To use the [Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/) API, you can configure the gem like this:
+
+```ruby
+    OpenAI.configure do |config|
+        config.access_token = ENV.fetch("AZURE_OPENAI_API_KEY")
+        config.uri_base = ENV.fetch("AZURE_OPENAI_URI")
+        config.api_type = :azure
+        config.api_version = "2023-03-15-preview"
+    end
+```
+
+where `AZURE_OPENAI_URI` is e.g. `https://custom-domain.openai.azure.com/openai/deployments/gpt-35-turbo`
+
 ### Models
 
 There are different models that can be used to generate text. For a full list and to retrieve information about a single model:
@@ -147,6 +162,66 @@ client.chat(
         end
     })
 # => "Anna is a young woman in her mid-twenties, with wavy chestnut hair that falls to her shoulders..."
+```
+
+### Functions
+
+You can describe and pass in functions and the model will intelligently choose to output a JSON object containing arguments to call those them. For example, if you want the model to use your method `get_current_weather` to get the current weather in a given location:
+
+```ruby
+def get_current_weather(location:, unit: "fahrenheit")
+  # use a weather api to fetch weather
+end
+
+response =
+  client.chat(
+    parameters: {
+      model: "gpt-3.5-turbo-0613",
+      messages: [
+        {
+          "role": "user",
+          "content": "What is the weather like in San Francisco?",
+        },
+      ],
+      functions: [
+        {
+          name: "get_current_weather",
+          description: "Get the current weather in a given location",
+          parameters: {
+            type: :object,
+            properties: {
+              location: {
+                type: :string,
+                description: "The city and state, e.g. San Francisco, CA",
+              },
+              unit: {
+                type: "string",
+                enum: %w[celsius fahrenheit],
+              },
+            },
+            required: ["location"],
+          },
+        },
+      ],
+    },
+  )
+
+message = response.dig("choices", 0, "message")
+
+if message["role"] == "assistant" && message["function_call"]
+  function_name = message.dig("function_call", "name")
+  args =
+    JSON.parse(
+      message.dig("function_call", "arguments"),
+      { symbolize_names: true },
+    )
+
+  case function_name
+  when "get_current_weather"
+    get_current_weather(**args)
+  end
+end
+# => "The weather is nice 🌞"
 ```
 
 ### Completions
